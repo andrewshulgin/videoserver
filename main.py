@@ -52,13 +52,18 @@ class Application:
         if self.config.get_telegram_enabled():
             self.notifiers.append(notifiers.Telegram(self.config))
         self._send_notification('Started')
-        count = 0
+        fs_limit = 99
+        fs_limit_counter = 0
+        # wait 10 sec before assuming that ffmpeg is running ok
+        ff_limit = 1000
+        ff_limit_counter = 0
         rec_keep_timedelta = datetime.timedelta(hours=self.config.get_rec_keep_hours())
+        failed_streams = []
         while self.running:
             time.sleep(0.01)
 
             ok = True
-            if count == 0:
+            if fs_limit_counter == 0:
                 recordings = []
                 for filename in os.listdir(self.config.get_rec_dir()):
                     if re.match('\w+_\d+\.mp4', filename):
@@ -86,10 +91,10 @@ class Application:
                     for filename in os.listdir(self.config.get_rec_dir()):
                         if re.match('\w+_\d+\.mp4', filename):
                             recordings.append(filename)
-            elif count > 99:
-                count = 0
+            elif fs_limit_counter > fs_limit:
+                fs_limit_counter = 0
             else:
-                count += 1
+                fs_limit_counter += 1
 
             if not ok:
                 break
@@ -111,7 +116,7 @@ class Application:
                     if 'snap' in stream and stream['snap'] is not None:
                         snap = stream['snap']
                     self.threads[stream['name']] = ffmpeg.FFmpeg(name, source, live, rec, segment_duration, snap)
-                    self.threads[stream['name']].start()
+                    # self.threads[stream['name']].start()
 
             threads_to_stop = []
             for name, thread in self.threads.items():
@@ -122,16 +127,30 @@ class Application:
                 del self.threads[name]
 
             for stream, thread in self.threads.items():
-                status = thread.status()
-                if status is None:
+                started, status = thread.status()
+                if not started:
+                    logging.info('Starting FFmpeg for {}'.format(stream))
                     thread.start()
-                elif status is not True:
-                    logging.warning(
-                        'FFmpeg for stream {} exited with status {:d}, restarting in 1 second'.format(stream, status)
-                    )
-                    self._send_notification('FFmpeg for stream {} exited with status {:d}'.format(stream, status))
-                    time.sleep(1)
+                elif status is not None:
+                    ff_limit_counter = 0
+                    if stream not in failed_streams:
+                        logging.warning(
+                            'FFmpeg for stream {} exited with status {:d}, restarting'.format(
+                                stream, status
+                            ))
+                        self._send_notification(
+                            'FFmpeg for stream {} exited with status {:d}'.format(stream, status))
+                        failed_streams.append(stream)
                     thread.start()
+                else:
+                    if stream in failed_streams:
+                        if ff_limit_counter < ff_limit:
+                            ff_limit_counter += 1
+                        else:
+                            logging.info('FFmpeg for stream {} restored'.format(stream))
+                            self._send_notification('FFmpeg for stream {} restored'.format(stream))
+                            failed_streams.remove(stream)
+
         logging.info('Shutting down')
         self._send_notification('Shutting down')
         self.server.stop()

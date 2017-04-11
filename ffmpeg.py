@@ -29,7 +29,9 @@ class FFmpeg:
         self.logfile = open(log, 'a+') if log else None
 
     def _construct_cmd(self):
-        self.cmd = [self.bin, '-y', '-nostats', '-re', '-rtsp_transport', 'tcp', '-i', self.source]
+        self.cmd = [
+            self.bin, '-y', '-nostats', '-stimeout', '1000000', '-re', '-rtsp_transport', 'tcp', '-i', self.source
+        ]
         if self.live:
             hls_file = os.path.join(self.live, '{}.m3u8'.format(self.name))
             self.cmd += ['-an', '-c:v', 'copy', '-hls_flags', 'delete_segments', hls_file]
@@ -53,7 +55,6 @@ class FFmpeg:
     def start(self):
         if not self.cmd:
             return None
-        logging.info('Starting FFmpeg for {}'.format(self.name))
         ffmpeg_logfile = self.logfile if self.logfile is not None else subprocess.DEVNULL
         self.subprocess = subprocess.Popen(
             self.cmd,
@@ -84,5 +85,5 @@ class FFmpeg:
 
     def status(self):
         if not self.cmd or not self.subprocess:
-            return None
-        return True if self.subprocess.poll() is None else self.subprocess.poll()
+            return False, None
+        return True, self.subprocess.poll()
