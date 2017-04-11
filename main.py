@@ -126,7 +126,7 @@ class Application:
                 if status is None:
                     thread.start()
                 elif status is not True:
-                    logging.info(
+                    logging.warning(
                         'FFmpeg for stream {} exited with status {:d}, restarting in 1 second'.format(stream, status)
                     )
                     self._send_notification('FFmpeg for stream {} exited with status {:d}'.format(stream, status))
