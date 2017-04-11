@@ -59,3 +59,26 @@ Stream configuration file [conf/streams.ini]:
     live = true
     rec = true
     snap = true
+
+NGINX Configuration example:
+
+    server {
+        # ...
+        location /live {
+                autoindex on;
+                autoindex_format json;
+        }
+        location /rec {
+                autoindex on;
+                autoindex_format json;
+        }
+        location /admin {
+            auth_basic videoserver;
+            auth_basic_user_file htpasswd;
+            location /admin/api {
+                # refer to the [api] section of the videoserver.ini
+                proxy_pass http://127.0.0.1:44270/;
+                proxy_buffering off;
+            }
+        }
+    }

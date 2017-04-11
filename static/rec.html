@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#272b30">
+    <meta name="msapplication-navbutton-color" content="#272b30">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="clappr.js"></script>
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+          crossorigin="anonymous">
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/slate/bootstrap.min.css"
+          integrity="sha384-RpX8okQqCyUNG7PlOYNybyJXYTtGQH+7rIKiVvg1DLg6jahLEk47VvpUyS+E2/uJ"
+          crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.js"
+            integrity="sha256-DZAnKJ/6XZ9si04Hgrsxu/8s717jcIzLy3oi35EouyE="
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+    <style>
+        #player {
+            background: #000000;
+        }
+
+        #player .player-poster[data-poster] {
+            background-size: contain !important;
+        }
+
+        .padded {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .dropdown-menu-fluid {
+            min-width: initial;
+            width: 100%;
+        }
+
+        .dropdown-menu-scroll {
+            height: auto;
+            max-height: 200px;
+            overflow-x: hidden;
+        }
+
+        .dropdown-menu.text-center li {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-default">
+    <div class="navbar-header">
+        <span class="navbar-brand"></span>
+    </div>
+    <div class="container-fluid">
+        <ul class="nav navbar-nav">
+            <li><a href="list.html">Live</a></li>
+            <li class="active"><a href="rec.html">Recordings</a></li>
+        </ul>
+    </div>
+</nav>
+<div class="container">
+    <div class="row padded">
+        <div class="btn-group btn-group-justified left">
+            <div class="btn-group">
+                <a class="btn btn-primary dropdown-toggle"
+                   data-toggle="dropdown"
+                >Stream <span id="current-stream"></span> <span class="caret"></span></a>
+                <ul id="stream-list"
+                    class="dropdown-menu dropdown-menu-fluid dropdown-menu-scroll text-center">
+                </ul>
+            </div>
+            <div class="btn-group">
+                <a class="btn btn-info dropdown-toggle"
+                   data-toggle="dropdown"
+                >Time <span id="current-time"></span> <span class="caret"></span></a>
+                <ul id="time-list"
+                    class="dropdown-menu dropdown-menu-fluid dropdown-menu-scroll text-center">
+                </ul>
+            </div>
+            <div class="btn-group" role="group">
+                <a id="download" class="disabled btn btn-success" download>
+                    <span class="glyphicon glyphicon-save"></span>
+                    Download
+                </a>
+            </div>
+        </div>
+    </div>
+    <div id="alert" class="row" style="display: none">
+        <div class="alert alert-danger alert-sm text-center" role="alert">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            No recordings found
+        </div>
+    </div>
+    <div class="row padded">
+        <div class="embed-responsive embed-responsive-16by9">
+            <div id="player" class="embed-responsive-item"></div>
+        </div>
+    </div>
+</div>
+<script>
+    var el = {
+        streamList: $('#stream-list'),
+        timeList: $('#time-list'),
+        currentStream: $('#current-stream'),
+        currentTime: $('#current-time'),
+        download: $('#download'),
+        alert: $('#alert')
+    };
+    var player;
+    var recordings = {};
+
+    function renderStreams() {
+        el.streamList.empty();
+        $.each(recordings, function (k, v) {
+            var streamLink = $('<a/>', {text: k, href: '?stream=' + k});
+            streamLink.on('click', function (e) {
+                e.preventDefault();
+                el.currentStream.text(k);
+                renderTimes(k);
+                if (!Object.keys(recordings[k]).length) {
+                    el.alert.show();
+                    return;
+                } else {
+                    el.alert.hide();
+                }
+                var lastRec = Object.keys(recordings[k])[Object.keys(recordings[k]).length - 1];
+                play(recordings[k][lastRec]);
+            });
+            el.streamList.append($('<li/>').append(streamLink));
+        });
+    }
+    function renderTimes(stream) {
+        el.timeList.empty();
+        $.each(recordings[stream], function (k, v) {
+            var timeLink = $('<a/>', {text: k, href: '?stream=' + stream + '&time=' + k});
+            timeLink.on('click', function (e) {
+                e.preventDefault();
+                el.currentTime.text(k);
+                play(v);
+            });
+            el.timeList.append($('<li/>').append(timeLink));
+        });
+    }
+    function play(video) {
+        el.download.attr('href', 'rec/' + video);
+        el.download.removeClass('disabled');
+        if (!player)
+            player = new Clappr.Player({
+                'source': 'rec/' + video,
+                'parentId': '#player',
+                'width': '100%',
+                'height': '100%',
+                'autoplay': true,
+                'muted': true,
+                'disableKeyboardShortcuts': true
+            });
+        else
+            player.load('rec/' + video);
+        player.play();
+    }
+
+    var loaded = $.Deferred()
+        .done(function () {
+            if (!Object.keys(recordings).length) {
+                el.alert.show();
+                return;
+            } else {
+                el.alert.hide();
+            }
+            var firstStream = Object.keys(recordings)[0];
+            renderStreams();
+            el.currentStream.text(firstStream);
+            if (!Object.keys(recordings[firstStream]).length) {
+                el.alert.show();
+                return;
+            } else {
+                el.alert.hide();
+            }
+            var firstRec = Object.keys(recordings[firstStream])[0];
+            var lastRec = Object.keys(recordings[firstStream])[Object.keys(recordings[firstStream]).length - 1];
+            renderTimes(Object.keys(recordings)[0]);
+            el.currentTime.text(lastRec);
+            play(recordings[firstStream][lastRec]);
+        });
+    function parseName(name) {
+        var lastUl = name.lastIndexOf('_');
+        if (lastUl === -1)
+            return null;
+        return {
+            name: name.substr(0, lastUl),
+            desc: name.substr(lastUl + 1).split('.')[0]
+        }
+    }
+    function checkLatest() {
+        var calls = [];
+        $.each(recordings, function (k, v) {
+            var d = $.Deferred();
+            calls.push(d);
+            $.ajax('rec/' + k + '_latest')
+                .done(function (data) {
+                    var l = parseName(data);
+                    if (!l) {
+                        d.resolve();
+                        return;
+                    }
+                    $.each(v, function (time) {
+                        if (parseInt(time) > parseInt(l.desc))
+                            delete recordings[k][time]
+                    });
+                    d.resolve();
+                })
+                .fail(function () {
+                    delete recordings[k];
+                    d.resolve();
+                });
+        });
+        $.when.apply(this, calls).done(loaded.resolve);
+    }
+    $.getJSON('rec/', function (data) {
+        $.each(data, function (k, v) {
+            var r = parseName(v.name);
+            if (!r || r.desc === 'latest')
+                return;
+            recordings[r.name] = recordings[r.name] || {};
+            recordings[r.name][r.desc] = v.name;
+        });
+        checkLatest();
+    });
+</script>
+</body>
+</html>

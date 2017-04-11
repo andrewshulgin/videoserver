@@ -48,11 +48,11 @@ class Config:
         if not self.parser.has_option('general', 'stop_timeout'):
             self.parser.set('general', 'stop_timeout', '10')
         if not self.parser.has_option('general', 'live_dir'):
-            dir_ = os.path.join(os.path.dirname(__file__), 'live')
+            dir_ = os.path.join(os.path.dirname(__file__), 'static', 'live')
             logging.warning('live_dir not set, falling back to {}'.format(dir_))
             self.parser.set('general', 'live_dir', dir_)
         if not self.parser.has_option('general', 'rec_dir'):
-            dir_ = os.path.join(os.path.dirname(__file__), 'rec')
+            dir_ = os.path.join(os.path.dirname(__file__), 'static', 'rec')
             logging.warning('rec_dir not set, falling back to {}'.format(dir_))
             self.parser.set('general', 'rec_dir', dir_)
         if not self.parser.has_option('general', 'keep_free_mb'):
