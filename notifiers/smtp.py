@@ -37,5 +37,5 @@ class SMTP(notifier.Notifier):
                     smtp.login(login, password)
                     smtp.send_message(message)
             logging.info('Sent Email successfully')
-        except smtplib.SMTPConnectError as e:
+        except smtplib.SMTPException as e:
             logging.error('Failed to send Email: {}'.format(str(e)))
