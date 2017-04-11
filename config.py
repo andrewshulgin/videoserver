@@ -28,6 +28,17 @@ class Config:
     def _init_config(self):
         if not self.parser.has_section('general'):
             self.parser.add_section('general')
+        if not self.parser.has_section('recording'):
+            self.parser.add_section('recording')
+        if not self.parser.has_section('api'):
+            self.parser.add_section('api')
+        if not self.parser.has_section('slack'):
+            self.parser.add_section('slack')
+        if not self.parser.has_section('smtp'):
+            self.parser.add_section('smtp')
+        if not self.parser.has_section('telegram'):
+            self.parser.add_section('telegram')
+
         if not self.parser.has_option('general', 'ffmpeg_bin'):
             bin_ = shutil.which('ffmpeg')
             if not bin_:
@@ -36,8 +47,6 @@ class Config:
             self.parser.set('general', 'ffmpeg_bin', bin_)
         if not self.parser.has_option('general', 'stop_timeout'):
             self.parser.set('general', 'stop_timeout', '10')
-        if not self.parser.has_option('general', 'segment_duration'):
-            self.parser.set('general', 'segment_duration', '3600')
         if not self.parser.has_option('general', 'live_dir'):
             dir_ = os.path.join(os.path.dirname(__file__), 'live')
             logging.warning('live_dir not set, falling back to {}'.format(dir_))
@@ -46,20 +55,60 @@ class Config:
             dir_ = os.path.join(os.path.dirname(__file__), 'rec')
             logging.warning('rec_dir not set, falling back to {}'.format(dir_))
             self.parser.set('general', 'rec_dir', dir_)
-        if not self.parser.has_option('general', 'http_addr'):
+        if not self.parser.has_option('general', 'keep_free_mb'):
+            self.parser.set('general', 'keep_free_mb', '100')
+
+        if not self.parser.has_option('api', 'http_addr'):
             logging.warning('http_addr not set, falling back to 127.0.0.1')
-            self.parser.set('general', 'http_addr', '127.0.0.1')
-        if not self.parser.has_option('general', 'http_port'):
+            self.parser.set('api', 'http_addr', '127.0.0.1')
+        if not self.parser.has_option('api', 'http_port'):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind(('', 0))
             port_ = s.getsockname()[1]
             s.close()
             logging.warning('http_port not set, picked {}'.format(port_))
-            self.parser.set('general', 'http_port', str(port_))
-        if not self.parser.has_option('general', 'rec_keep_hours'):
-            self.parser.set('general', 'rec_keep_hours', '12')
-        if not self.parser.has_option('general', 'rec_keep_mb'):
-            self.parser.set('general', 'rec_keep_mb', '100')
+            self.parser.set('api', 'http_port', str(port_))
+
+        if not self.parser.has_option('recording', 'rec_keep_hours'):
+            self.parser.set('recording', 'rec_keep_hours', '12')
+        if not self.parser.has_option('recording', 'segment_duration'):
+            self.parser.set('recording', 'segment_duration', '3600')
+
+        if not self.parser.has_option('slack', 'enabled'):
+            self.parser.set('slack', 'enabled', 'false')
+        if not self.parser.has_option('slack', 'webhook_url'):
+            self.parser.set('slack', 'webhook_url', 'change_me')
+        if not self.parser.has_option('slack', 'channel'):
+            self.parser.set('slack', 'channel', '#general')
+
+        if not self.parser.has_option('smtp', 'enabled'):
+            self.parser.set('smtp', 'enabled', 'false')
+        if not self.parser.has_option('smtp', 'server'):
+            self.parser.set('smtp', 'server', 'example.com')
+        if not self.parser.has_option('smtp', 'port'):
+            self.parser.set('smtp', 'port', '587')
+        if not self.parser.has_option('smtp', 'login'):
+            self.parser.set('smtp', 'login', 'videoserver@example.com')
+        if not self.parser.has_option('smtp', 'password'):
+            self.parser.set('smtp', 'password', 'change_me')
+        if not self.parser.has_option('smtp', 'from'):
+            self.parser.set('smtp', 'from', 'videoserver@example.com')
+        if not self.parser.has_option('smtp', 'subject'):
+            self.parser.set('smtp', 'subject', 'VideoServer Notification')
+        if not self.parser.has_option('smtp', 'recipient'):
+            self.parser.set('smtp', 'recipient', 'user@exmaple.com')
+        if not self.parser.has_option('smtp', 'security'):
+            self.parser.set('smtp', 'security', 'starttls')
+
+        if not self.parser.has_option('telegram', 'enabled'):
+            self.parser.set('telegram', 'enabled', 'false')
+        if not self.parser.has_option('telegram', 'api_key'):
+            self.parser.set('telegram', 'api_key', 'change_me')
+        if not self.parser.has_option('telegram', 'chat_id'):
+            self.parser.set('telegram', 'chat_id', '@example')
+        if not self.parser.has_option('telegram', 'convert_chat_id'):
+            self.parser.set('telegram', 'convert_chat_id', 'true')
+
         self.save()
 
     def _parse_stream(self, section):
@@ -94,7 +143,7 @@ class Config:
         return self.parser.get('general', 'stop_timeout')
 
     def get_segment_duration(self):
-        return self.parser.getint('general', 'segment_duration')
+        return self.parser.getint('recording', 'segment_duration')
 
     def get_live_dir(self):
         return self.parser.get('general', 'live_dir')
@@ -103,16 +152,72 @@ class Config:
         return self.parser.get('general', 'rec_dir')
 
     def get_http_addr(self):
-        return self.parser.get('general', 'http_addr')
+        return self.parser.get('api', 'http_addr')
 
     def get_http_port(self):
-        return self.parser.getint('general', 'http_port')
+        return self.parser.getint('api', 'http_port')
 
     def get_rec_keep_hours(self):
-        return self.parser.getint('general', 'rec_keep_hours')
+        return self.parser.getint('recording', 'rec_keep_hours')
 
-    def get_rec_keep_mb(self):
-        return self.parser.getint('general', 'rec_keep_mb')
+    def get_keep_free_mb(self):
+        return self.parser.getint('general', 'keep_free_mb')
+
+    def get_slack_enabled(self):
+        return self.parser.getboolean('slack', 'enabled')
+
+    def get_slack_webhook_url(self):
+        return self.parser.get('slack', 'webhook_url')
+
+    def get_slack_channel(self):
+        return self.parser.get('slack', 'channel')
+
+    def get_smtp_enabled(self):
+        return self.parser.getboolean('smtp', 'enabled')
+
+    def get_smtp_server(self):
+        return self.parser.get('smtp', 'server')
+
+    def get_smtp_port(self):
+        return self.parser.getint('smtp', 'port')
+
+    def get_smtp_login(self):
+        return self.parser.get('smtp', 'login')
+
+    def get_smtp_password(self):
+        return self.parser.get('smtp', 'password')
+
+    def get_smtp_from(self):
+        return self.parser.get('smtp', 'from')
+
+    def get_smtp_subject(self):
+        return self.parser.get('smtp', 'subject')
+
+    def get_smtp_recipient(self):
+        return self.parser.get('smtp', 'recipient')
+
+    def get_smtp_security(self):
+        return self.parser.get('smtp', 'security')
+
+    def get_telegram_enabled(self):
+        return self.parser.getboolean('telegram', 'enabled')
+
+    def get_telegram_api_key(self):
+        return self.parser.get('telegram', 'api_key')
+
+    def get_telegram_chat_id(self):
+        return self.parser.get('telegram', 'chat_id')
+
+    def set_telegram_chat_id(self, chat_id):
+        self.parser.set('telegram', 'chat_id', str(chat_id))
+        self.save()
+
+    def get_telegram_convert_chat_id(self):
+        return self.parser.getboolean('telegram', 'convert_chat_id')
+
+    def save(self):
+        with open(self.config_file, 'w') as fp:
+            self.parser.write(fp)
 
     def get_streams(self):
         streams = []
@@ -160,10 +265,6 @@ class Config:
         self.stream_parser.remove_section(section)
         self.save_streams()
         return success
-
-    def save(self):
-        with open(self.config_file, 'w') as fp:
-            self.parser.write(fp)
 
     def save_streams(self):
         with open(self.stream_config_file, 'w') as fp:

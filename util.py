@@ -1,4 +1,5 @@
 import string
+import urllib.request
 
 
 def escape_name(s):
@@ -36,3 +37,13 @@ def filesizeformat(b):
     if negative:
         value = "-{}".format(value)
     return value
+
+
+class TolerantHTTPErrorProcessor(urllib.request.HTTPErrorProcessor):
+    def __init__(self):
+        super().__init__()
+
+    def http_response(self, req, res):
+        return res
+
+    https_response = http_response
