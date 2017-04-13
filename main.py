@@ -19,7 +19,7 @@ import notifiers
 def configure_logging():
     logging.root.setLevel(logging.NOTSET)
     handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', '%Y-%d-%m %H:%M:%S'))
+    handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S'))
     logging.root.addHandler(handler)
 
 
