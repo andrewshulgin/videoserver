@@ -46,11 +46,14 @@ class Application:
         recordings = self._find_recordings()
         for filename in os.listdir(self.config.get_rec_dir()):
             if re.match('[A-z-_\d]+_latest', filename):
-                with open(filename) as f:
+                remove = False
+                with open(os.path.join(self.config.get_rec_dir(), filename)) as f:
                     rec_filename = f.readline().strip()
                     if rec_filename not in recordings:
-                        logging.info('Removing stale _latest file: {}'.format(filename))
-                        os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                        remove = True
+                if remove:
+                    logging.info('Removing stale {}'.format(filename))
+                    os.remove(os.path.join(self.config.get_rec_dir(), filename))
 
     def run(self):
         logging.info('Starting')
@@ -83,7 +86,7 @@ class Application:
             if fs_limit_check_ticks == 0:
                 recordings = self._find_recordings()
                 for filename in recordings:
-                    stream_name, datetime_str = str(filename.split('.', 1)[0]).split('_', 1)
+                    stream_name, datetime_str = str(filename.rsplit('.', 1)[0]).rsplit('_', 1)
                     datetime_ = datetime.datetime.strptime(datetime_str, '%Y%m%d%H%M')
                     if datetime.datetime.now() - datetime_ > rec_keep_timedelta:
                         logging.info('Removing record "{}" due to expiry of {:d} hours'.format(
