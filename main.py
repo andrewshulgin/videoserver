@@ -57,7 +57,7 @@ class Application:
         # wait before assuming that ffmpeg is running ok
         ff_limit = self.config.get_ffmpeg_start_timeout() * 100
         ff_limit_counter = 0
-        rec_keep_timedelta = datetime.timedelta(seconds=self.config.get_rec_keep_hours())
+        rec_keep_timedelta = datetime.timedelta(hours=self.config.get_rec_keep_hours())
         failed_streams = []
         while self.running:
             time.sleep(0.01)
