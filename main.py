@@ -54,10 +54,10 @@ class Application:
         self._send_notification('Started')
         fs_limit = 99
         fs_limit_counter = 0
-        # wait 10 sec before assuming that ffmpeg is running ok
-        ff_limit = 1000
+        # wait before assuming that ffmpeg is running ok
+        ff_limit = self.config.get_ffmpeg_start_timeout() * 100
         ff_limit_counter = 0
-        rec_keep_timedelta = datetime.timedelta(hours=self.config.get_rec_keep_hours())
+        rec_keep_timedelta = datetime.timedelta(seconds=self.config.get_rec_keep_hours())
         failed_streams = []
         while self.running:
             time.sleep(0.01)
@@ -66,7 +66,7 @@ class Application:
             if fs_limit_counter == 0:
                 recordings = []
                 for filename in os.listdir(self.config.get_rec_dir()):
-                    if re.match('\w+_\d+\.mp4', filename):
+                    if re.match('[A-z-_\d]+_\d+\.mp4', filename):
                         recordings.append(filename)
                 recordings.sort()
                 for filename in recordings:
@@ -115,8 +115,10 @@ class Application:
                         rec = self.config.get_rec_dir()
                     if 'snap' in stream and stream['snap'] is not None:
                         snap = stream['snap']
-                    self.threads[stream['name']] = ffmpeg.FFmpeg(name, source, live, rec, segment_duration, snap)
-                    # self.threads[stream['name']].start()
+                    self.threads[stream['name']] = ffmpeg.FFmpeg(
+                        name, source, live, rec, segment_duration, snap,
+                        stop_timeout=self.config.get_ffmpeg_stop_timeout()
+                    )
 
             threads_to_stop = []
             for name, thread in self.threads.items():
@@ -124,6 +126,8 @@ class Application:
                     threads_to_stop.append(name)
             for name in threads_to_stop:
                 self.threads[name].stop()
+                if name in failed_streams:
+                    failed_streams.remove(name)
                 del self.threads[name]
 
             for stream, thread in self.threads.items():

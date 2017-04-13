@@ -2,7 +2,10 @@ Main configuration file [conf/videoserver.ini]:
 
     [general]
     ffmpeg_bin = /usr/bin/ffmpeg
-    stop_timeout = 10
+    ; seconds before FFmpeg process is treated as running
+    ffmpeg_start_timeout = 20
+    ; seconds before killing FFmpeg process
+    ffmpeg_stop_timeout = 10
     live_dir = /home/shulgin/PycharmProjects/videoserver/live
     rec_dir = /home/shulgin/PycharmProjects/videoserver/rec
     keep_free_mb = 100

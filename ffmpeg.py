@@ -7,7 +7,7 @@ import util
 
 
 class FFmpeg:
-    def __init__(self, name, source, live=None, rec=None, segment_duration=10, snap=True, log=None):
+    def __init__(self, name, source, live=None, rec=None, segment_duration=10, snap=True, stop_timeout=10):
         self.bin = '/usr/bin/ffmpeg'
 
         self.name = util.escape_name(name)
@@ -22,16 +22,13 @@ class FFmpeg:
             self.rec = False
         self.segment_duration = segment_duration
         self.snap = snap
+        self.stop_timeout = stop_timeout
 
         self.cmd = self._construct_cmd()
         self.subprocess = None
 
-        self.logfile = open(log, 'a+') if log else None
-
     def _construct_cmd(self):
-        self.cmd = [
-            self.bin, '-y', '-nostats', '-stimeout', '1000000', '-re', '-rtsp_transport', 'tcp', '-i', self.source
-        ]
+        self.cmd = [self.bin, '-y', '-stimeout', '1000000', '-re', '-rtsp_transport', 'tcp', '-i', self.source]
         if self.live:
             hls_file = os.path.join(self.live, '{}.m3u8'.format(self.name))
             self.cmd += ['-an', '-c:v', 'copy', '-hls_flags', 'delete_segments', hls_file]
@@ -55,13 +52,13 @@ class FFmpeg:
     def start(self):
         if not self.cmd:
             return None
-        ffmpeg_logfile = self.logfile if self.logfile is not None else subprocess.DEVNULL
         self.subprocess = subprocess.Popen(
             self.cmd,
-            stdout=ffmpeg_logfile,
-            stderr=ffmpeg_logfile,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL
         )
+        self.subprocess.poll()
 
     def stop(self):
         if not self.cmd or not self.subprocess:
@@ -70,17 +67,14 @@ class FFmpeg:
         try:
             self.subprocess.send_signal(signal.SIGTERM)
             try:
-                ret = self.subprocess.wait(10)
+                ret = self.subprocess.wait(self.stop_timeout)
             except subprocess.TimeoutExpired:
                 logging.warning('Failed to stop FFmpeg for {}, killing'.format(self.name))
                 self.subprocess.kill()
-                ret = -1
+                ret = -9
         except ProcessLookupError:
             ret = self.subprocess.poll()
         logging.info('Stopped FFmpeg for {}'.format(self.name))
-        if self.logfile:
-            self.logfile.flush()
-            self.logfile.close()
         return ret
 
     def status(self):
