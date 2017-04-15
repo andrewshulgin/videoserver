@@ -49,6 +49,8 @@ class Config:
             self.parser.set('general', 'ffmpeg_start_timeout', '20')
         if not self.parser.has_option('general', 'ffmpeg_stop_timeout'):
             self.parser.set('general', 'ffmpeg_stop_timeout', '10')
+        if not self.parser.has_option('general', 'stream_down_timeout'):
+            self.parser.set('general', 'stream_down_timeout', '60')
         if not self.parser.has_option('general', 'live_dir'):
             dir_ = os.path.join(os.path.dirname(__file__), 'static', 'live')
             logging.warning('live_dir not set, falling back to {}'.format(dir_))
@@ -146,6 +148,9 @@ class Config:
 
     def get_ffmpeg_stop_timeout(self):
         return self.parser.getint('general', 'ffmpeg_stop_timeout')
+
+    def get_stream_down_timeout(self):
+        return self.parser.getint('general', 'stream_down_timeout')
 
     def get_segment_duration(self):
         return self.parser.getint('recording', 'segment_duration')

@@ -52,7 +52,7 @@ class Application:
                     if rec_filename not in recordings:
                         remove = True
                 if remove:
-                    logging.info('Removing stale {}'.format(filename))
+                    logging.info('Removing stale q{}'.format(filename))
                     os.remove(os.path.join(self.config.get_rec_dir(), filename))
 
     def run(self):
@@ -78,7 +78,7 @@ class Application:
         ff_limit = self.config.get_ffmpeg_start_timeout() * 100
         ff_limit_counter = 0
         rec_keep_timedelta = datetime.timedelta(hours=self.config.get_rec_keep_hours())
-        failed_streams = []
+        failed_streams = {}
         while self.running:
             time.sleep(0.01)
 
@@ -142,7 +142,7 @@ class Application:
             for name in threads_to_stop:
                 self.threads[name].stop()
                 if name in failed_streams:
-                    failed_streams.remove(name)
+                    del failed_streams[name]
                 del self.threads[name]
 
             for stream, thread in self.threads.items():
@@ -150,25 +150,31 @@ class Application:
                 if not started:
                     logging.info('Starting FFmpeg for {}'.format(stream))
                     thread.start()
+                # failed
                 elif status is not None:
                     ff_limit_counter = 0
-                    if stream not in failed_streams:
+                    if stream in failed_streams:
+                        if failed_streams[stream] >= self.config.get_stream_down_timeout():
+                            self._send_notification('Stream {} failed'.format(stream))
+                            failed_streams[stream] = -1
+                        elif failed_streams[stream] is not -1:
+                            failed_streams[stream] += 1
+                    else:
                         logging.warning(
-                            'FFmpeg for stream {} exited with status {:d}, restarting'.format(
-                                stream, status
-                            ))
-                        self._send_notification(
-                            'FFmpeg for stream {} exited with status {:d}'.format(stream, status))
-                        failed_streams.append(stream)
+                            'FFmpeg for stream {} exited with status {:d}, restarting'.format(stream, status)
+                        )
+                        failed_streams[stream] = 0
                     thread.start()
+                # running
                 else:
                     if stream in failed_streams:
                         if ff_limit_counter < ff_limit:
                             ff_limit_counter += 1
                         else:
                             logging.info('FFmpeg for stream {} restored'.format(stream))
-                            self._send_notification('FFmpeg for stream {} restored'.format(stream))
-                            failed_streams.remove(stream)
+                            if failed_streams[stream] == -1:
+                                self._send_notification('Stream {} restored'.format(stream))
+                            del failed_streams[stream]
 
         logging.info('Shutting down')
         self._send_notification('Shutting down')
