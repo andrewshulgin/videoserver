@@ -16,7 +16,6 @@ class HttpGet(Notifier):
             'status': 1 if status else 0,
             # 'message': message
         }
-        print('{}?{}'.format(self.config.get_http_get_url(), urllib.parse.urlencode(params)))
         request = urllib.request.Request('{}?{}'.format(
             self.config.get_http_get_url(),
             urllib.parse.urlencode(params))
