@@ -1,12 +1,14 @@
+import logging
 import smtplib
 from email.mime.text import MIMEText
-import logging
 
-import notifier
+from notifier import *
 
 
-class SMTP(notifier.Notifier):
-    def send(self, message):
+class SMTP(Notifier):
+    def send(self, message, stream=None, status=None):
+        if message is None:
+            return
         server = self.config.get_smtp_server()
         port = self.config.get_smtp_port()
         login = self.config.get_smtp_login()

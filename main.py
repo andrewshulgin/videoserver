@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 import datetime
+import logging
 import os
 import re
 import shutil
 import signal
+import sys
 import threading
 import time
-import logging
-import sys
 
 import config
 import ffmpeg
-import util
 import httpapi
 import notifiers
+import util
 
 
 def configure_logging():
@@ -31,21 +31,21 @@ class Application:
         self.notifiers = []
         self.server = None
 
-    def _send_notification(self, message):
+    def _send_notification(self, message, stream=None, status=None):
         for notifier in self.notifiers:
-            threading.Thread(target=notifier.send, args=[message]).start()
+            threading.Thread(target=notifier.send, args=[message, stream, status]).start()
 
     def _find_recordings(self):
         recordings = []
         for filename in os.listdir(self.config.get_rec_dir()):
-            if re.match('[A-z-_\d]+_\d+\.mp4', filename):
+            if re.match('^[A-z-_\d]+_\d+\.mp4$', filename):
                 recordings.append(filename)
         return sorted(recordings)
 
     def _remove_stale_latest_files(self):
         recordings = self._find_recordings()
         for filename in os.listdir(self.config.get_rec_dir()):
-            if re.match('[A-z-_\d]+_latest', filename):
+            if re.match('^[A-z-_\d]+_latest$', filename):
                 remove = False
                 with open(os.path.join(self.config.get_rec_dir(), filename)) as f:
                     rec_filename = f.readline().strip()
@@ -53,7 +53,10 @@ class Application:
                         remove = True
                 if remove:
                     logging.info('Removing stale q{}'.format(filename))
-                    os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                    try:
+                        os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                    except FileNotFoundError:
+                        pass
 
     def run(self):
         logging.info('Starting')
@@ -65,6 +68,8 @@ class Application:
         logging.info('Free space: {}'.format(util.filesizeformat(shutil.disk_usage(self.config.get_rec_dir()).free)))
         self.running = True
         self.server.start()
+        if self.config.get_http_get_enabled():
+            self.notifiers.append(notifiers.HttpGet(self.config))
         if self.config.get_slack_enabled():
             self.notifiers.append(notifiers.Slack(self.config))
         if self.config.get_smtp_enabled():
@@ -75,8 +80,8 @@ class Application:
         fs_check_tick_limit = 99
         fs_limit_check_ticks = 0
         # wait before assuming that ffmpeg is running ok
-        ff_limit = self.config.get_ffmpeg_start_timeout() * 100
-        ff_limit_counter = 0
+        ff_success_cnt = self.config.get_ffmpeg_start_timeout() * 100
+        ff_running_cnt = {}
         rec_keep_timedelta = datetime.timedelta(hours=self.config.get_rec_keep_hours())
         failed_streams = {}
         while self.running:
@@ -92,7 +97,10 @@ class Application:
                         logging.info('Removing record "{}" due to expiry of {:d} hours'.format(
                             filename, self.config.get_rec_keep_hours()
                         ))
-                        os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                        try:
+                            os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                        except FileNotFoundError:
+                            pass
                         recordings.remove(filename)
                 while shutil.disk_usage(self.config.get_rec_dir()).free < (self.config.get_keep_free_mb() * 1000000):
                     if not recordings or len(recordings) < 1:
@@ -103,7 +111,10 @@ class Application:
                     filename = recordings[0]
                     logging.warning('Free space is less than {:d} MB'.format(self.config.get_keep_free_mb()))
                     logging.warning('Removing record {} due to lack of free space'.format(filename))
-                    os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                    try:
+                        os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                    except FileNotFoundError:
+                        pass
                     recordings = self._find_recordings()
                 self._remove_stale_latest_files()
             elif fs_limit_check_ticks > fs_check_tick_limit:
@@ -152,10 +163,11 @@ class Application:
                     thread.start()
                 # failed
                 elif status is not None:
-                    ff_limit_counter = 0
+                    if stream in ff_running_cnt:
+                        del ff_running_cnt[stream]
                     if stream in failed_streams:
                         if failed_streams[stream] >= self.config.get_stream_down_timeout():
-                            self._send_notification('Stream {} failed'.format(stream))
+                            self._send_notification('Stream {} failed'.format(stream), stream, False)
                             failed_streams[stream] = -1
                         elif failed_streams[stream] is not -1:
                             failed_streams[stream] += 1
@@ -167,14 +179,21 @@ class Application:
                     thread.start()
                 # running
                 else:
-                    if stream in failed_streams:
-                        if ff_limit_counter < ff_limit:
-                            ff_limit_counter += 1
+                    if stream not in ff_running_cnt:
+                        ff_running_cnt[stream] = 0
+                    else:
+                        if -1 < ff_running_cnt[stream] < ff_success_cnt:
+                            ff_running_cnt[stream] += 1
                         else:
-                            logging.info('FFmpeg for stream {} restored'.format(stream))
-                            if failed_streams[stream] == -1:
-                                self._send_notification('Stream {} restored'.format(stream))
-                            del failed_streams[stream]
+                            if stream in failed_streams:
+                                logging.info('FFmpeg for stream {} restored'.format(stream))
+                                if failed_streams[stream] == -1:
+                                    self._send_notification('Stream {} restored'.format(stream), stream, True)
+                                del failed_streams[stream]
+                            elif ff_running_cnt[stream] is not -1:
+                                logging.info('FFmpeg for stream {} started successfully'.format(stream))
+                                self._send_notification(None, stream, True)
+                                ff_running_cnt[stream] = -1
 
         logging.info('Shutting down')
         self._send_notification('Shutting down')

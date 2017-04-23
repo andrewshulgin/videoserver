@@ -1,14 +1,16 @@
-import urllib.request
-import urllib.error
 import json
 import logging
+import urllib.error
+import urllib.request
 
-import notifier
 import util
+from notifier import *
 
 
-class Telegram(notifier.Notifier):
-    def send(self, message):
+class Telegram(Notifier):
+    def send(self, message, stream=None, status=None):
+        if message is None:
+            return
         url = 'https://api.telegram.org/bot{}/sendMessage'.format(self.config.get_telegram_api_key())
         params = {'chat_id': self.config.get_telegram_chat_id(), 'text': message}
         request = urllib.request.Request(

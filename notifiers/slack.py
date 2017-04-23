@@ -1,14 +1,16 @@
-import urllib.request
-import urllib.error
 import json
 import logging
+import urllib.error
+import urllib.request
 
-import notifier
 import util
+from notifier import *
 
 
-class Slack(notifier.Notifier):
-    def send(self, message):
+class Slack(Notifier):
+    def send(self, message, stream=None, status=None):
+        if message is None:
+            return
         params = {'channel': self.config.get_slack_channel(), 'text': message}
         request = urllib.request.Request(
             url=self.config.get_slack_webhook_url(),

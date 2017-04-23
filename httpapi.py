@@ -1,12 +1,11 @@
 import http.server
+import json
+import logging
 import os
 import re
-import socketserver
-import logging
-import threading
-import json
-
 import shutil
+import socketserver
+import threading
 
 import util
 
@@ -74,10 +73,10 @@ def create_handler(config, threads):
                 self.threads[name].stop()
             files_to_delete = []
             for filename in os.listdir(self.config.get_rec_dir()):
-                if re.match('{}_\d+\.mp4'.format(name), filename) or filename == '{}_latest'.format(name):
+                if re.match('^{}_\d+\.mp4$'.format(name), filename) or filename == '{}_latest'.format(name):
                     files_to_delete.append(os.path.join(self.config.get_rec_dir(), filename))
             for filename in os.listdir(self.config.get_live_dir()):
-                if re.match('{}\d+\.(ts)'.format(name), filename) \
+                if re.match('^{}\d+\.ts$'.format(name), filename) \
                         or filename == '{}.jpg'.format(name) \
                         or filename == '{}.m3u8'.format(name):
                     files_to_delete.append(os.path.join(self.config.get_live_dir(), filename))

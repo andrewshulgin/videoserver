@@ -32,6 +32,8 @@ class Config:
             self.parser.add_section('recording')
         if not self.parser.has_section('api'):
             self.parser.add_section('api')
+        if not self.parser.has_section('http_get'):
+            self.parser.add_section('http_get')
         if not self.parser.has_section('slack'):
             self.parser.add_section('slack')
         if not self.parser.has_section('smtp'):
@@ -77,6 +79,13 @@ class Config:
             self.parser.set('recording', 'rec_keep_hours', '12')
         if not self.parser.has_option('recording', 'segment_duration'):
             self.parser.set('recording', 'segment_duration', '3600')
+
+        if not self.parser.has_option('http_get', 'enabled'):
+            self.parser.set('http_get', 'enabled', 'false')
+        if not self.parser.has_option('http_get', 'url'):
+            self.parser.set('http_get', 'url', 'http://example.com/notify')
+        if not self.parser.has_option('http_get', 'success_response'):
+            self.parser.set('http_get', 'success_response', 'ok')
 
         if not self.parser.has_option('slack', 'enabled'):
             self.parser.set('slack', 'enabled', 'false')
@@ -172,6 +181,15 @@ class Config:
 
     def get_keep_free_mb(self):
         return self.parser.getint('general', 'keep_free_mb')
+
+    def get_http_get_enabled(self):
+        return self.parser.getboolean('http_get', 'enabled')
+
+    def get_http_get_url(self):
+        return self.parser.get('http_get', 'url')
+
+    def get_http_get_success_response(self):
+        return self.parser.get('http_get', 'success_response')
 
     def get_slack_enabled(self):
         return self.parser.getboolean('slack', 'enabled')
