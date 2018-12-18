@@ -91,7 +91,7 @@ class Application:
                 recordings = self._find_recordings()
                 for filename in recordings:
                     stream_name, datetime_str = str(filename.rsplit('.', 1)[0]).rsplit('_', 1)
-                    datetime_ = datetime.datetime.strptime(datetime_str, '%Y%m%d%H%M')
+                    datetime_ = datetime.datetime.strptime(datetime_str, self.config.get_date_fmt())
                     if datetime.datetime.now() - datetime_ > rec_keep_timedelta:
                         logging.info('Removing record "{}" due to expiry of {:d} hours'.format(
                             filename, self.config.get_rec_keep_hours()
@@ -133,7 +133,6 @@ class Application:
                     live = None
                     rec = None
                     snap = None
-                    segment_duration = self.config.get_segment_duration()
                     if stream['live']:
                         live = self.config.get_live_dir()
                     if stream['rec']:
@@ -141,8 +140,12 @@ class Application:
                     if 'snap' in stream and stream['snap'] is not None:
                         snap = stream['snap']
                     self.threads[stream['name']] = ffmpeg.FFmpeg(
-                        name, source, live, rec, segment_duration, snap,
-                        stop_timeout=self.config.get_ffmpeg_stop_timeout()
+                        name, source,
+                        ffmpeg_bin=self.config.get_ffmpeg_bin(),
+                        live=live, rec=rec, snap=snap,
+                        segment_duration=stream['segment_duration'],
+                        stop_timeout=self.config.get_ffmpeg_stop_timeout(),
+                        date_fmt=self.config.get_date_fmt()
                     )
 
             threads_to_stop = []

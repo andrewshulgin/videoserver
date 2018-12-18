@@ -7,8 +7,13 @@ import util
 
 
 class FFmpeg:
-    def __init__(self, name, source, live=None, rec=None, segment_duration=10, snap=True, stop_timeout=10):
-        self.bin = '/usr/bin/ffmpeg'
+    def __init__(
+            self, name, source, ffmpeg_bin='/usr/bin/ffmpeg',
+            live=None, rec=None, snap=True,
+            segment_duration=10, stop_timeout=10,
+            date_fmt='%Y%m%d%H%M%%S'
+    ):
+        self.bin = ffmpeg_bin
 
         self.name = util.escape_name(name)
         self.source = source
@@ -23,6 +28,7 @@ class FFmpeg:
         self.segment_duration = segment_duration
         self.snap = snap
         self.stop_timeout = stop_timeout
+        self.date_fmt = date_fmt
 
         self.cmd = self._construct_cmd()
         self.subprocess = None
@@ -33,7 +39,7 @@ class FFmpeg:
             hls_file = os.path.join(self.live, '{}.m3u8'.format(self.name))
             self.cmd += ['-an', '-c:v', 'copy', '-hls_flags', 'delete_segments', hls_file]
         if self.rec:
-            rec_file_format = os.path.join(self.rec, '{}_%Y%m%d%H%M.mp4'.format(self.name))
+            rec_file_format = os.path.join(self.rec, '{}_{}.mp4'.format(self.name, self.date_fmt))
             latest_file = os.path.join(self.rec, '{}_latest'.format(self.name))
             self.cmd += [
                 '-an', '-c:v', 'copy', '-f', 'segment', '-segment_format_options', 'movflags=faststart',

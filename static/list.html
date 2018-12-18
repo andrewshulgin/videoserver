@@ -48,6 +48,7 @@
     </div>
 </div>
 <script>
+    $('.navbar-brand').text(window.location.host);
     $.getJSON('live/', function (data) {
         $.each(data, function (k, v) {
             var lastDot = v.name.lastIndexOf('.');

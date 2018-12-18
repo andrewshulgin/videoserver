@@ -11,7 +11,8 @@ DEFAULTS = {
         'ffmpeg_start_timeout': '20',
         'ffmpeg_stop_timeout': '10',
         'stream_down_timeout': '60',
-        'keep_free_mb': '100'
+        'keep_free_mb': '100',
+        'date_fmt': '%%Y%%m%%d%%H%%M%%S'
     },
     'recording': {
         'rec_keep_hours': '12',
@@ -70,7 +71,8 @@ class Config:
         for section, items in DEFAULTS.items():
             if not self.parser.has_section(section):
                 self.parser.add_section(section)
-                for key, value in items.items():
+            for key, value in items.items():
+                if not self.parser.has_option(section, key):
                     self.parser.set(section, key, value)
 
         if not self.parser.has_option('general', 'ffmpeg_bin'):
@@ -112,11 +114,9 @@ class Config:
         rec = self.stream_parser.getboolean(section, 'rec')
         snap = self.stream_parser.getboolean(section, 'snap')
         segment_duration = self.get_segment_duration()
-        if rec:
-            if self.stream_parser.has_option(section, 'segment_duration'):
-                segment_duration = self.stream_parser.getint(section, 'segment_duration')
-            else:
-                segment_duration = self.get_segment_duration()
+        if self.stream_parser.has_option(section, 'segment_duration'):
+            segment_duration = self.stream_parser.getint(section, 'segment_duration')
+
         return {
             'name': name,
             'source': source,
@@ -137,6 +137,9 @@ class Config:
 
     def get_stream_down_timeout(self):
         return self.parser.getint('general', 'stream_down_timeout')
+
+    def get_date_fmt(self):
+        return self.parser.get('general', 'date_fmt')
 
     def get_segment_duration(self):
         return self.parser.getint('recording', 'segment_duration')

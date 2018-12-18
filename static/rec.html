@@ -221,6 +221,9 @@
         });
         $.when.apply(this, calls).done(loaded.resolve);
     }
+
+    $('.navbar-brand').text(window.location.host);
+
     $.getJSON('rec/', function (data) {
         $.each(data, function (k, v) {
             var r = parseName(v.name);
