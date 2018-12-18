@@ -1,9 +1,9 @@
-/live
-/rec
-/conf
-/env
+/live/
+/rec/
+/conf/
+/env/
 
-/.idea
+.idea/
 
 __pycache__/
 *.py[cod]

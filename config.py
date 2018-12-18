@@ -6,6 +6,47 @@ import socket
 
 import util
 
+DEFAULTS = {
+    'general': {
+        'ffmpeg_start_timeout': '20',
+        'ffmpeg_stop_timeout': '10',
+        'stream_down_timeout': '60',
+        'keep_free_mb': '100'
+    },
+    'recording': {
+        'rec_keep_hours': '12',
+        'segment_duration': '3600'
+    },
+    'api': {},
+    'http_get': {
+        'enabled': 'false',
+        'url': 'http://example.com/notify',
+        'success_response': 'ok'
+    },
+    'slack': {
+        'enabled': 'false',
+        'webhook_url': 'change_me',
+        'channel': '#general'
+    },
+    'smtp': {
+        'enabled': 'false',
+        'server': 'example.com',
+        'port': '587',
+        'login': 'videoserver@example.com',
+        'password': 'change_me',
+        'from': 'videoserver@example.com',
+        'subject': 'VideoServer Notification',
+        'recipient': 'user@exmaple.com',
+        'security': 'starttls'
+    },
+    'telegram': {
+        'enabled': 'false',
+        'api_key': 'change_me',
+        'chat_id': '@example',
+        'convert_chat_id': 'true'
+    }
+}
+
 
 class FFmpegNotFoundError(Exception):
     def __str__(self):
@@ -26,20 +67,11 @@ class Config:
         self._init_config()
 
     def _init_config(self):
-        if not self.parser.has_section('general'):
-            self.parser.add_section('general')
-        if not self.parser.has_section('recording'):
-            self.parser.add_section('recording')
-        if not self.parser.has_section('api'):
-            self.parser.add_section('api')
-        if not self.parser.has_section('http_get'):
-            self.parser.add_section('http_get')
-        if not self.parser.has_section('slack'):
-            self.parser.add_section('slack')
-        if not self.parser.has_section('smtp'):
-            self.parser.add_section('smtp')
-        if not self.parser.has_section('telegram'):
-            self.parser.add_section('telegram')
+        for section, items in DEFAULTS.items():
+            if not self.parser.has_section(section):
+                self.parser.add_section(section)
+                for key, value in items.items():
+                    self.parser.set(section, key, value)
 
         if not self.parser.has_option('general', 'ffmpeg_bin'):
             bin_ = shutil.which('ffmpeg')
@@ -47,12 +79,6 @@ class Config:
                 raise FileNotFoundError('FFmpeg binary not found. Set ffmpeg_bin in the general config section')
             logging.warning('ffmpeg_bin not set, guessed: {}'.format(bin_))
             self.parser.set('general', 'ffmpeg_bin', bin_)
-        if not self.parser.has_option('general', 'ffmpeg_start_timeout'):
-            self.parser.set('general', 'ffmpeg_start_timeout', '20')
-        if not self.parser.has_option('general', 'ffmpeg_stop_timeout'):
-            self.parser.set('general', 'ffmpeg_stop_timeout', '10')
-        if not self.parser.has_option('general', 'stream_down_timeout'):
-            self.parser.set('general', 'stream_down_timeout', '60')
         if not self.parser.has_option('general', 'live_dir'):
             dir_ = os.path.join(os.path.dirname(__file__), 'static', 'live')
             logging.warning('live_dir not set, falling back to {}'.format(dir_))
@@ -61,8 +87,6 @@ class Config:
             dir_ = os.path.join(os.path.dirname(__file__), 'static', 'rec')
             logging.warning('rec_dir not set, falling back to {}'.format(dir_))
             self.parser.set('general', 'rec_dir', dir_)
-        if not self.parser.has_option('general', 'keep_free_mb'):
-            self.parser.set('general', 'keep_free_mb', '100')
 
         if not self.parser.has_option('api', 'http_addr'):
             logging.warning('http_addr not set, falling back to 127.0.0.1')
@@ -74,53 +98,6 @@ class Config:
             s.close()
             logging.warning('http_port not set, picked {}'.format(port_))
             self.parser.set('api', 'http_port', str(port_))
-
-        if not self.parser.has_option('recording', 'rec_keep_hours'):
-            self.parser.set('recording', 'rec_keep_hours', '12')
-        if not self.parser.has_option('recording', 'segment_duration'):
-            self.parser.set('recording', 'segment_duration', '3600')
-
-        if not self.parser.has_option('http_get', 'enabled'):
-            self.parser.set('http_get', 'enabled', 'false')
-        if not self.parser.has_option('http_get', 'url'):
-            self.parser.set('http_get', 'url', 'http://example.com/notify')
-        if not self.parser.has_option('http_get', 'success_response'):
-            self.parser.set('http_get', 'success_response', 'ok')
-
-        if not self.parser.has_option('slack', 'enabled'):
-            self.parser.set('slack', 'enabled', 'false')
-        if not self.parser.has_option('slack', 'webhook_url'):
-            self.parser.set('slack', 'webhook_url', 'change_me')
-        if not self.parser.has_option('slack', 'channel'):
-            self.parser.set('slack', 'channel', '#general')
-
-        if not self.parser.has_option('smtp', 'enabled'):
-            self.parser.set('smtp', 'enabled', 'false')
-        if not self.parser.has_option('smtp', 'server'):
-            self.parser.set('smtp', 'server', 'example.com')
-        if not self.parser.has_option('smtp', 'port'):
-            self.parser.set('smtp', 'port', '587')
-        if not self.parser.has_option('smtp', 'login'):
-            self.parser.set('smtp', 'login', 'videoserver@example.com')
-        if not self.parser.has_option('smtp', 'password'):
-            self.parser.set('smtp', 'password', 'change_me')
-        if not self.parser.has_option('smtp', 'from'):
-            self.parser.set('smtp', 'from', 'videoserver@example.com')
-        if not self.parser.has_option('smtp', 'subject'):
-            self.parser.set('smtp', 'subject', 'VideoServer Notification')
-        if not self.parser.has_option('smtp', 'recipient'):
-            self.parser.set('smtp', 'recipient', 'user@exmaple.com')
-        if not self.parser.has_option('smtp', 'security'):
-            self.parser.set('smtp', 'security', 'starttls')
-
-        if not self.parser.has_option('telegram', 'enabled'):
-            self.parser.set('telegram', 'enabled', 'false')
-        if not self.parser.has_option('telegram', 'api_key'):
-            self.parser.set('telegram', 'api_key', 'change_me')
-        if not self.parser.has_option('telegram', 'chat_id'):
-            self.parser.set('telegram', 'chat_id', '@example')
-        if not self.parser.has_option('telegram', 'convert_chat_id'):
-            self.parser.set('telegram', 'convert_chat_id', 'true')
 
         self.save()
 
@@ -247,6 +224,9 @@ class Config:
         with open(self.config_file, 'w') as fp:
             self.parser.write(fp)
 
+    def reload(self):
+        self.parser.read(self.config_file)
+
     def get_streams(self):
         streams = []
         for section in self.stream_parser.sections():
@@ -264,22 +244,14 @@ class Config:
         if 'source' not in params:
             logging.error('Stream has no source')
             return
-        if 'live' not in params:
-            params['live'] = True
-        if 'rec' not in params:
-            params['rec'] = True
-        if 'snap' not in params:
-            params['snap'] = True
-        if 'segment_duration' not in params:
-            params['segment_duration'] = None
         name = util.escape_name(params['name'])
         section = '{}{}'.format(self.stream_prefix, util.escape_name(name))
         self.stream_parser.add_section(section)
         self.stream_parser.set(section, 'source', params['source'])
-        self.stream_parser.set(section, 'live', 'true' if params['live'] else 'false')
-        self.stream_parser.set(section, 'rec', 'true' if params['rec'] else 'false')
-        self.stream_parser.set(section, 'snap', 'true' if params['snap'] else 'false')
-        if params['segment_duration'] is not None:
+        self.stream_parser.set(section, 'live', 'true' if params.get('live', True) else 'false')
+        self.stream_parser.set(section, 'rec', 'true' if params.get('rec', True) else 'false')
+        self.stream_parser.set(section, 'snap', 'true' if params.get('snap', True) else 'false')
+        if params.get('segment_duration', None) is not None:
             self.stream_parser.set(section, 'segment_duration', params['segment_duration'])
         self.save_streams()
 
@@ -297,3 +269,6 @@ class Config:
     def save_streams(self):
         with open(self.stream_config_file, 'w') as fp:
             self.stream_parser.write(fp)
+
+    def reload_streams(self):
+        self.stream_parser.read(self.stream_config_file)

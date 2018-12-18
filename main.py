@@ -201,6 +201,11 @@ class Application:
             thread.stop()
         return 0
 
+    def reload(self):
+        logging.info('Reloading configuration files')
+        self.config.reload()
+        self.config.reload_streams()
+
     def stop(self):
         self.running = False
 
@@ -211,6 +216,7 @@ if __name__ == '__main__':
         app = Application()
         signal.signal(signal.SIGINT, lambda signum, frame: app.stop())
         signal.signal(signal.SIGTERM, lambda signum, frame: app.stop())
+        signal.signal(signal.SIGHUP, lambda signum, frame: app.reload())
         exit(app.run())
     except Exception as e:
         logging.critical(e or e.__class__.__name__)
