@@ -51,7 +51,7 @@ class Application:
                     if rec_filename not in recordings:
                         remove = True
                 if remove:
-                    logging.info('Removing stale q{}'.format(filename))
+                    logging.info('Removing stale {}'.format(filename))
                     try:
                         os.remove(os.path.join(self.config.get_rec_dir(), filename))
                     except FileNotFoundError:
