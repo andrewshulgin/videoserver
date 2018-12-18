@@ -24,7 +24,7 @@ def filesizeformat(b):
         b = -b
 
     if b < kb:
-        value = "{:d} B".format(b)
+        value = "{:.0f} B".format(b)
     elif b < mb:
         value = "{:.2f} KB".format(b / kb)
     elif b < gb:

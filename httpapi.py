@@ -26,10 +26,12 @@ def create_handler(config, threads):
 
         def do_PUT(self):
             name = util.escape_name(self.path[1:])
-            if not self.headers['Content-Length'] \
-                    or not self.headers['Content-Type'] \
-                    or not self.headers['Content-Type'].split(';')[0] == 'application/json' \
-                    or not len(name):
+            if (
+                    not self.headers['Content-Length']
+                    or not self.headers['Content-Type']
+                    or not self.headers['Content-Type'].split(';')[0] == 'application/json'
+                    or not len(name)
+            ):
                 self.send_response(400)
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
@@ -73,12 +75,14 @@ def create_handler(config, threads):
                 self.threads[name].stop()
             files_to_delete = []
             for filename in os.listdir(self.config.get_rec_dir()):
-                if re.match('^{}_\d+\.mp4$'.format(name), filename) or filename == '{}_latest'.format(name):
+                if re.match(r'^{}_\d+\.mp4$'.format(name), filename) or filename == '{}_latest'.format(name):
                     files_to_delete.append(os.path.join(self.config.get_rec_dir(), filename))
             for filename in os.listdir(self.config.get_live_dir()):
-                if re.match('^{}\d+\.ts$'.format(name), filename) \
-                        or filename == '{}.jpg'.format(name) \
-                        or filename == '{}.m3u8'.format(name):
+                if (
+                        re.match(r'^{}\d+\.ts$'.format(name), filename)
+                        or filename == '{}.jpg'.format(name)
+                        or filename == '{}.m3u8'.format(name)
+                ):
                     files_to_delete.append(os.path.join(self.config.get_live_dir(), filename))
             for filename in files_to_delete:
                 logging.info('Removing file "{}" due to stream removal'.format(filename))

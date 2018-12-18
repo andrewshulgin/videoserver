@@ -26,8 +26,10 @@ class Telegram(Notifier):
             return
         if response['ok']:
             logging.info('Sent Telegram message successfully')
-            if not self.config.get_telegram_chat_id().lstrip('-').isnumeric() \
-                    and self.config.get_telegram_convert_chat_id():
+            if (
+                    not self.config.get_telegram_chat_id().lstrip('-').isnumeric()
+                    and self.config.get_telegram_convert_chat_id()
+            ):
                 self.config.set_telegram_chat_id(response['result']['chat']['id'])
         else:
             logging.error('Failed to send Telegram message: {}'.format(response['description']))

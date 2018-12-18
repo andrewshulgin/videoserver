@@ -15,11 +15,11 @@ class FFmpeg:
         if live:
             self.live = os.path.realpath(live)
         else:
-            self.live = False
+            self.live = None
         if rec:
             self.rec = os.path.realpath(rec)
         else:
-            self.rec = False
+            self.rec = None
         self.segment_duration = segment_duration
         self.snap = snap
         self.stop_timeout = stop_timeout

@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 import signal
-import sys
 import threading
 import time
 
@@ -38,14 +37,14 @@ class Application:
     def _find_recordings(self):
         recordings = []
         for filename in os.listdir(self.config.get_rec_dir()):
-            if re.match('^[A-z-_\d]+_\d+\.mp4$', filename):
+            if re.match(r'^[A-z-_\d]+_\d+\.mp4$', filename):
                 recordings.append(filename)
         return sorted(recordings)
 
     def _remove_stale_latest_files(self):
         recordings = self._find_recordings()
         for filename in os.listdir(self.config.get_rec_dir()):
-            if re.match('^[A-z-_\d]+_latest$', filename):
+            if re.match(r'^[A-z-_\d]+_latest$', filename):
                 remove = False
                 with open(os.path.join(self.config.get_rec_dir(), filename)) as f:
                     rec_filename = f.readline().strip()
@@ -202,22 +201,17 @@ class Application:
             thread.stop()
         return 0
 
-    def stop(self, *_):
+    def stop(self):
         self.running = False
 
 
 if __name__ == '__main__':
     configure_logging()
-    if len(sys.argv) > 1 and sys.argv[1] == '--debug':
+    try:
         app = Application()
-        signal.signal(signal.SIGINT, app.stop)
-        signal.signal(signal.SIGTERM, app.stop)
+        signal.signal(signal.SIGINT, lambda signum, frame: app.stop())
+        signal.signal(signal.SIGTERM, lambda signum, frame: app.stop())
         exit(app.run())
-    else:
-        try:
-            app = Application()
-            signal.signal(signal.SIGINT, app.stop)
-            signal.signal(signal.SIGTERM, app.stop)
-            exit(app.run())
-        except Exception as e:
-            logging.critical(e or e.__class__.__name__)
+    except Exception as e:
+        logging.critical(e or e.__class__.__name__)
+        raise

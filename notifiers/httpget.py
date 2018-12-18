@@ -14,7 +14,7 @@ class HttpGet(Notifier):
         params = {
             'stream': stream,
             'status': 1 if status else 0,
-            # 'message': message
+            'message': message
         }
         request = urllib.request.Request('{}?{}'.format(
             self.config.get_http_get_url(),
