@@ -11,7 +11,7 @@ class FFmpeg:
             self, name, source, ffmpeg_bin='/usr/bin/ffmpeg',
             live=None, rec=None, snap=True,
             segment_duration=10, stop_timeout=10,
-            date_fmt='%Y%m%d%H%M%%S'
+            date_fmt='%Y%m%d%H%M%S'
     ):
         self.bin = ffmpeg_bin
 
@@ -34,7 +34,7 @@ class FFmpeg:
         self.subprocess = None
 
     def _construct_cmd(self):
-        self.cmd = [self.bin, '-y', '-stimeout', '1000000', '-re', '-rtsp_transport', 'tcp', '-i', self.source]
+        self.cmd = [self.bin, '-y', '-timeout', '1000000', '-re', '-rtsp_transport', 'tcp', '-i', self.source]
         if self.live:
             hls_file = os.path.join(self.live, '{}.m3u8'.format(self.name))
             self.cmd += ['-an', '-c:v', 'copy', '-hls_flags', 'delete_segments', hls_file]
@@ -50,7 +50,7 @@ class FFmpeg:
         if self.snap:
             snap_file = os.path.join(self.live, '{}.jpg'.format(self.name))
             self.cmd += [
-                '-an', '-vf', "select='eq(pict_type,PICT_TYPE_I)'", '-vsync', 'vfr', '-q:v', '28', '-update', '1',
+                '-an', '-vf', "select='eq(pict_type,PICT_TYPE_I)'", '-fps_mode', 'vfr', '-q:v', '28', '-update', '1',
                 snap_file
             ]
         return self.cmd
