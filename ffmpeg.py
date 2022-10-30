@@ -53,7 +53,7 @@ class FFmpeg:
         if self.snap:
             snap_file = os.path.join(self.live, '{}.jpg'.format(self.name))
             self.cmd += [
-                '-an', '-vf', "select='eq(pict_type,PICT_TYPE_I)'", '-fps_mode', 'vfr', '-q:v', '28', '-update', '1',
+                '-an', '-vf', "select='eq(pict_type,PICT_TYPE_I)'", '-vsync', 'vfr', '-q:v', '28', '-update', '1',
                 snap_file
             ]
         return self.cmd
