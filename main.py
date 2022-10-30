@@ -89,6 +89,7 @@ class Application:
             ok = True
             if fs_limit_check_ticks == 0:
                 recordings = self._find_recordings()
+                # do not remove if rec_keep_hours is 0
                 if rec_keep_timedelta > datetime.timedelta():
                     for filename in recordings:
                         stream_name, datetime_str = str(filename.rsplit('.', 1)[0]).rsplit('_', 1)
