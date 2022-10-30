@@ -51,7 +51,7 @@ class Application:
                     if rec_filename not in recordings:
                         remove = True
                 if remove:
-                    logging.info('Removing stale {}'.format(filename))
+                    logging.info('Removing stale %s', filename)
                     try:
                         os.remove(os.path.join(self.config.get_rec_dir(), filename))
                     except FileNotFoundError:
@@ -61,10 +61,10 @@ class Application:
         logging.info('Starting')
         self.config = config.Config()
         self.server = httpapi.HttpApi(self.config, self.threads)
-        logging.info('Using FFmpeg binary: {}'.format(self.config.get_ffmpeg_bin()))
+        logging.info('Using FFmpeg binary: %s', self.config.get_ffmpeg_bin())
         os.makedirs(os.path.realpath(self.config.get_live_dir()), exist_ok=True)
         os.makedirs(os.path.realpath(self.config.get_rec_dir()), exist_ok=True)
-        logging.info('Free space: {}'.format(util.filesizeformat(shutil.disk_usage(self.config.get_rec_dir()).free)))
+        logging.info('Free space: %s', util.filesizeformat(shutil.disk_usage(self.config.get_rec_dir()).free))
         self.running = True
         self.server.start()
         if self.config.get_http_get_enabled():
@@ -93,9 +93,10 @@ class Application:
                     stream_name, datetime_str = str(filename.rsplit('.', 1)[0]).rsplit('_', 1)
                     datetime_ = datetime.datetime.strptime(datetime_str, self.config.get_date_fmt())
                     if datetime.datetime.now() - datetime_ > rec_keep_timedelta:
-                        logging.info('Removing record "{}" due to expiry of {:d} hours'.format(
-                            filename, self.config.get_rec_keep_hours()
-                        ))
+                        logging.info(
+                            'Removing record "%s" due to expiry of %d hours',
+                            filename, self.config.get_rec_keep_hours(),
+                        )
                         try:
                             os.remove(os.path.join(self.config.get_rec_dir(), filename))
                         except FileNotFoundError:
@@ -108,8 +109,8 @@ class Application:
                         ok = False
                         break
                     filename = recordings[0]
-                    logging.warning('Free space is less than {:d} MB'.format(self.config.get_keep_free_mb()))
-                    logging.warning('Removing record {} due to lack of free space'.format(filename))
+                    logging.warning('Free space is less than %d MB', self.config.get_keep_free_mb())
+                    logging.warning('Removing record %s due to lack of free space', filename)
                     try:
                         os.remove(os.path.join(self.config.get_rec_dir(), filename))
                     except FileNotFoundError:
@@ -145,7 +146,8 @@ class Application:
                         live=live, rec=rec, snap=snap,
                         segment_duration=stream['segment_duration'],
                         stop_timeout=self.config.get_ffmpeg_stop_timeout(),
-                        date_fmt=self.config.get_date_fmt()
+                        date_fmt=self.config.get_date_fmt(),
+                        debug_output=self.config.get_ffmpeg_debug_output(),
                     )
 
             threads_to_stop = []
@@ -161,7 +163,7 @@ class Application:
             for stream, thread in self.threads.items():
                 started, status = thread.status()
                 if not started:
-                    logging.info('Starting FFmpeg for {}'.format(stream))
+                    logging.info('Starting FFmpeg for %s', stream)
                     thread.start()
                 # failed
                 elif status is not None:
@@ -171,11 +173,12 @@ class Application:
                         if failed_streams[stream] >= self.config.get_stream_down_timeout():
                             self._send_notification('Stream {} failed'.format(stream), stream, False)
                             failed_streams[stream] = -1
-                        elif failed_streams[stream] is not -1:
+                        elif failed_streams[stream] != -1:
                             failed_streams[stream] += 1
                     else:
                         logging.warning(
-                            'FFmpeg for stream {} exited with status {:d}, restarting'.format(stream, status)
+                            'FFmpeg for stream %s exited with status %d, restarting',
+                            stream, status,
                         )
                         failed_streams[stream] = 0
                     thread.start()
@@ -188,12 +191,12 @@ class Application:
                             ff_running_cnt[stream] += 1
                         else:
                             if stream in failed_streams:
-                                logging.info('FFmpeg for stream {} restored'.format(stream))
+                                logging.info('FFmpeg for stream %s restored', stream)
                                 if failed_streams[stream] == -1:
                                     self._send_notification('Stream {} restored'.format(stream), stream, True)
                                 del failed_streams[stream]
-                            elif ff_running_cnt[stream] is not -1:
-                                logging.info('FFmpeg for stream {} started successfully'.format(stream))
+                            elif ff_running_cnt[stream] != -1:
+                                logging.info('FFmpeg for stream %s started successfully', stream)
                                 self._send_notification(None, stream, True)
                                 ff_running_cnt[stream] = -1
 

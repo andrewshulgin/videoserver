@@ -1,7 +1,9 @@
 import os
 import subprocess
+import shlex
 import signal
 import logging
+import sys
 
 import util
 
@@ -11,7 +13,7 @@ class FFmpeg:
             self, name, source, ffmpeg_bin='/usr/bin/ffmpeg',
             live=None, rec=None, snap=True,
             segment_duration=10, stop_timeout=10,
-            date_fmt='%Y%m%d%H%M%S'
+            date_fmt='%Y%m%d%H%M%S', debug_output=False,
     ):
         self.bin = ffmpeg_bin
 
@@ -32,6 +34,8 @@ class FFmpeg:
 
         self.cmd = self._construct_cmd()
         self.subprocess = None
+
+        self.debug_output = debug_output
 
     def _construct_cmd(self):
         self.cmd = [self.bin, '-y', '-timeout', '1000000', '-re', '-rtsp_transport', 'tcp', '-i', self.source]
@@ -58,29 +62,30 @@ class FFmpeg:
     def start(self):
         if not self.cmd:
             return None
+        logging.debug('FFmpeg command: %s', shlex.join(self.cmd))
         self.subprocess = subprocess.Popen(
             self.cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL
+            stdout=sys.stderr if self.debug_output else subprocess.DEVNULL,
+            stderr=sys.stderr if self.debug_output else subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
         )
         self.subprocess.poll()
 
     def stop(self):
         if not self.cmd or not self.subprocess:
             return None
-        logging.info('Stopping FFmpeg for {}'.format(self.name))
+        logging.info('Stopping FFmpeg for %s', self.name)
         try:
             self.subprocess.send_signal(signal.SIGTERM)
             try:
                 ret = self.subprocess.wait(self.stop_timeout)
             except subprocess.TimeoutExpired:
-                logging.warning('Failed to stop FFmpeg for {}, killing'.format(self.name))
+                logging.warning('Failed to stop FFmpeg for %s, killing', self.name)
                 self.subprocess.kill()
                 ret = -9
         except ProcessLookupError:
             ret = self.subprocess.poll()
-        logging.info('Stopped FFmpeg for {}'.format(self.name))
+        logging.info('Stopped FFmpeg for %s', self.name)
         return ret
 
     def status(self):

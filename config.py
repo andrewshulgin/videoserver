@@ -10,6 +10,7 @@ DEFAULTS = {
     'general': {
         'ffmpeg_start_timeout': '20',
         'ffmpeg_stop_timeout': '10',
+        'ffmpeg_debug_output': 'false',
         'stream_down_timeout': '60',
         'keep_free_mb': '100',
         'date_fmt': '%%Y%%m%%d%%H%%M%%S'
@@ -79,15 +80,15 @@ class Config:
             bin_ = shutil.which('ffmpeg')
             if not bin_:
                 raise FileNotFoundError('FFmpeg binary not found. Set ffmpeg_bin in the general config section')
-            logging.warning('ffmpeg_bin not set, guessed: {}'.format(bin_))
+            logging.warning('ffmpeg_bin not set, guessed: %s', bin_)
             self.parser.set('general', 'ffmpeg_bin', bin_)
         if not self.parser.has_option('general', 'live_dir'):
             dir_ = os.path.join(os.path.dirname(__file__), 'static', 'live')
-            logging.warning('live_dir not set, falling back to {}'.format(dir_))
+            logging.warning('live_dir not set, falling back to %s', dir_)
             self.parser.set('general', 'live_dir', dir_)
         if not self.parser.has_option('general', 'rec_dir'):
             dir_ = os.path.join(os.path.dirname(__file__), 'static', 'rec')
-            logging.warning('rec_dir not set, falling back to {}'.format(dir_))
+            logging.warning('rec_dir not set, falling back to %s', dir_)
             self.parser.set('general', 'rec_dir', dir_)
 
         if not self.parser.has_option('api', 'http_addr'):
@@ -98,7 +99,7 @@ class Config:
             s.bind(('', 0))
             port_ = s.getsockname()[1]
             s.close()
-            logging.warning('http_port not set, picked {}'.format(port_))
+            logging.warning('http_port not set, picked %s', port_)
             self.parser.set('api', 'http_port', str(port_))
 
         self.save()
@@ -108,7 +109,7 @@ class Config:
         if self.stream_parser.has_option(section, 'source'):
             source = self.stream_parser.get(section, 'source')
         else:
-            logging.warning('Stream {} has no source, ignoring'.format(name))
+            logging.warning('Stream %s has no source, ignoring', name)
             return None
         live = self.stream_parser.getboolean(section, 'live')
         rec = self.stream_parser.getboolean(section, 'rec')
@@ -134,6 +135,9 @@ class Config:
 
     def get_ffmpeg_stop_timeout(self):
         return self.parser.getint('general', 'ffmpeg_stop_timeout')
+
+    def get_ffmpeg_debug_output(self):
+        return self.parser.getboolean('general', 'ffmpeg_debug_output')
 
     def get_stream_down_timeout(self):
         return self.parser.getint('general', 'stream_down_timeout')
@@ -264,7 +268,7 @@ class Config:
         success = True
         if not self.stream_parser.has_section(section):
             success = False
-            logging.error('No such stream: {}'.format(name))
+            logging.error('No such stream: %s', name)
         self.stream_parser.remove_section(section)
         self.save_streams()
         return success
