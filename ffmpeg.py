@@ -1,6 +1,5 @@
 import os
 import subprocess
-import shlex
 import signal
 import logging
 import sys
@@ -62,7 +61,7 @@ class FFmpeg:
     def start(self):
         if not self.cmd:
             return None
-        logging.debug('FFmpeg command: %s', shlex.join(self.cmd))
+        logging.debug('FFmpeg command: %s', subprocess.list2cmdline(self.cmd))
         self.subprocess = subprocess.Popen(
             self.cmd,
             stdout=sys.stderr if self.debug_output else subprocess.DEVNULL,
