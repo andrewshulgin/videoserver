@@ -89,19 +89,20 @@ class Application:
             ok = True
             if fs_limit_check_ticks == 0:
                 recordings = self._find_recordings()
-                for filename in recordings:
-                    stream_name, datetime_str = str(filename.rsplit('.', 1)[0]).rsplit('_', 1)
-                    datetime_ = datetime.datetime.strptime(datetime_str, self.config.get_date_fmt())
-                    if datetime.datetime.now() - datetime_ > rec_keep_timedelta:
-                        logging.info(
-                            'Removing record "%s" due to expiry of %d hours',
-                            filename, self.config.get_rec_keep_hours(),
-                        )
-                        try:
-                            os.remove(os.path.join(self.config.get_rec_dir(), filename))
-                        except FileNotFoundError:
-                            pass
-                        recordings.remove(filename)
+                if rec_keep_timedelta > datetime.timedelta():
+                    for filename in recordings:
+                        stream_name, datetime_str = str(filename.rsplit('.', 1)[0]).rsplit('_', 1)
+                        datetime_ = datetime.datetime.strptime(datetime_str, self.config.get_date_fmt())
+                        if datetime.datetime.now() - datetime_ > rec_keep_timedelta:
+                            logging.info(
+                                'Removing record "%s" due to expiry of %d hours',
+                                filename, self.config.get_rec_keep_hours(),
+                            )
+                            try:
+                                os.remove(os.path.join(self.config.get_rec_dir(), filename))
+                            except FileNotFoundError:
+                                pass
+                            recordings.remove(filename)
                 while shutil.disk_usage(self.config.get_rec_dir()).free < (self.config.get_keep_free_mb() * 1000000):
                     if not recordings or len(recordings) < 1:
                         logging.critical('Unable to free up the required space')
